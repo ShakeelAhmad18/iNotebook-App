@@ -12,7 +12,7 @@ app.get('/', (req, res) => {
 })
 
  app.use(express.json())
-
+//create endpoints in app 
 app.use('/api/auth',require('./routes/auth'))
 app.use('/api/notes',require('./routes/notes'))
 
