@@ -4,7 +4,9 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const router=express.Router()
 const { body, validationResult } = require('express-validator');
-//create use User using POST:/api/auth/createuser no login required
+const fetchuser=require('../middleware/fetchuser')
+//ROUTE 1:create use User using POST:/api/auth/createuser no login required
+
 const JWT_SECRET='Shakeelisgood18'
 
 router.post('/createuser',[
@@ -46,8 +48,62 @@ router.post('/createuser',[
    }
    catch(error){
       console.error(error.message);
-      res.status(500).send("Some error is occured")
+      res.status(500).send("Internal Sever Error")
    }
 });
+
+//ROUTE 2:autheticate a user /api/auth/login no login required
+
+router.post('/login',[
+  //if there are error ,then return bad request and error
+  body('email','Enter a valid email').isEmail(),
+  body('password','password cannot be balnk').exists()
+],async (req,res)=>{
+
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ errors: errors.array() });
+  }
+
+const {password,email}=req.body;
+try{
+  let user=await User.findOne({email})
+  if(!user){
+    return res.status(400).json({error:'Login in with correct Credientials'})
+  }
+const paasCompare=await bcrypt.compare(password,user.password)
+if(!paasCompare){
+  return res.status(400).json({error:'Login in with correct Credientials'})
+}
+
+const data={
+  user:{
+    id:user.id
+  }
+}
+
+authToken=jwt.sign(data,JWT_SECRET)
+
+res.json(authToken)
+
+}catch(error){
+  console.error(error.message)
+  res.status(500).send('Internal Server Error')
+}
+})
+
+//Route 3: Get user Details using POST /api/auth/loginuser: login required
+router.post('/getuser',fetchuser,async (req,res)=>{
+  try {
+    const userid=req.user.id;
+   const user=await User.findById(userid).select('-password')
+    res.send(user)
+  } catch (error) {
+    console.error(error.message)
+    res.status(500).send('Internal Server Error')
+  }
+
+
+})
 
 module.exports=router
